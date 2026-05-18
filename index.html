@@ -1,0 +1,206 @@
+// App State
+let currentState = 'language'; // language, onboarding, main, detail
+let currentContext = null;
+let selectedPlaceId = null;
+
+// DOM Elements
+const appDiv = document.getElementById('app');
+
+// Render Functions
+function render() {
+    appDiv.innerHTML = '';
+    
+    if (currentState === 'language') {
+        appDiv.innerHTML = renderLanguageScreen();
+    } else if (currentState === 'onboarding') {
+        appDiv.innerHTML = renderOnboardingScreen();
+    } else if (currentState === 'main') {
+        appDiv.innerHTML = renderMainScreen();
+    } else if (currentState === 'detail') {
+        appDiv.innerHTML = renderDetailScreen();
+    }
+}
+
+// Handlers
+window.goToOnboarding = () => {
+    currentState = 'onboarding';
+    render();
+};
+
+window.goToMain = (context) => {
+    currentContext = context;
+    currentState = 'main';
+    render();
+};
+
+window.goToDetail = (id) => {
+    selectedPlaceId = id;
+    currentState = 'detail';
+    render();
+};
+
+window.goBack = () => {
+    if (currentState === 'detail') {
+        currentState = 'main';
+    } else if (currentState === 'main') {
+        currentState = 'onboarding';
+    }
+    render();
+};
+
+window.setFilter = (context) => {
+    currentContext = context;
+    render();
+};
+
+// Screen Components
+function renderLanguageScreen() {
+    return `
+        <div class="screen lang-screen">
+            <h1>InfraNow</h1>
+            <p style="color: rgba(255,255,255,0.8); margin-bottom: 40px;">Find what you need, right now.</p>
+            <button class="btn" onclick="goToOnboarding()">Start in English</button>
+            <button class="btn btn-outline" style="margin-top: 16px; border-color: rgba(255,255,255,0.3); color: white;" onclick="alert('Only English is supported in MVP.')">한국어 시작하기</button>
+        </div>
+    `;
+}
+
+function renderOnboardingScreen() {
+    return `
+        <div class="screen onboarding-screen">
+            <h1 style="margin-top: 40px;">What do you need now?</h1>
+            <p>Select a category to find nearby places tailored for you.</p>
+            
+            <div class="tags-grid">
+                <div class="tag-btn" onclick="goToMain('Study')">
+                    <span class="tag-icon">📚</span>
+                    <span>Study</span>
+                </div>
+                <div class="tag-btn" onclick="goToMain('Food')">
+                    <span class="tag-icon">🍔</span>
+                    <span>Food</span>
+                </div>
+                <div class="tag-btn" onclick="goToMain('Rest')">
+                    <span class="tag-icon">🌳</span>
+                    <span>Rest</span>
+                </div>
+                <div class="tag-btn" onclick="goToMain('Coffee')">
+                    <span class="tag-icon">☕</span>
+                    <span>Coffee</span>
+                </div>
+                <div class="tag-btn" onclick="goToMain('Cheap')">
+                    <span class="tag-icon">💰</span>
+                    <span>Cheap</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderMainScreen() {
+    // Filter places
+    const filteredPlaces = currentContext === 'All' 
+        ? places 
+        : places.filter(p => p.tags.includes(currentContext));
+
+    const filters = ['All', 'Study', 'Food', 'Rest', 'Coffee', 'Cheap'];
+
+    return `
+        <div class="screen">
+            <div class="header">
+                <button class="back-btn" onclick="goBack()">←</button>
+                <div class="header-title">Nearby Places</div>
+                <div style="width: 24px;"></div>
+            </div>
+            
+            <div class="filter-scroll">
+                ${filters.map(f => `
+                    <div class="filter-pill ${currentContext === f ? 'active' : ''}" onclick="setFilter('${f}')">
+                        ${f}
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="place-list">
+                ${filteredPlaces.length > 0 ? filteredPlaces.map((p, index) => `
+                    <div class="place-card" style="animation-delay: ${index * 0.1}s" onclick="goToDetail(${p.id})">
+                        <div class="place-card-header">
+                            <div class="place-name">${p.name}</div>
+                            <div class="place-distance">${p.walkTime}</div>
+                        </div>
+                        <div class="place-category">${p.category} • ⭐ ${p.rating}</div>
+                        <div class="place-why">
+                            <strong>Why this place?</strong>
+                            ${p.whyThisPlace}
+                        </div>
+                    </div>
+                `).join('') : '<p style="text-align:center; margin-top:40px;">No places found for this category nearby.</p>'}
+            </div>
+        </div>
+    `;
+}
+
+function renderDetailScreen() {
+    const p = places.find(place => place.id === selectedPlaceId);
+    if (!p) return '';
+
+    return `
+        <div class="screen" style="padding: 0; overflow-y: auto;">
+            <div class="detail-scroll-area">
+                <div class="detail-hero">
+                    <button class="back-btn" onclick="goBack()">←</button>
+                    <div class="detail-title">${p.name}</div>
+                    <div class="detail-meta">
+                        <span>⭐ ${p.rating}</span>
+                        <span>📍 ${p.distance} (${p.walkTime})</span>
+                        <span>🏷️ ${p.category}</span>
+                    </div>
+                </div>
+                
+                <div style="padding: 24px;">
+                    <div class="section">
+                        <h3>ℹ️ Basic Info</h3>
+                        <div class="info-row">
+                            <span class="info-label">Operating Hours</span>
+                            <span class="info-value">${p.operatingHours}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Tags</span>
+                            <span class="info-value">${p.tags.join(', ')}</span>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>🤝 Foreigner Friendly Info</h3>
+                        <div class="info-row">
+                            <span class="info-label">English Available</span>
+                            <span class="info-value ${p.foreignFriendly.englishAvailable ? 'success' : 'warning'}">
+                                ${p.foreignFriendly.englishAvailable ? 'Yes' : 'Limited'}
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Ease of Use</span>
+                            <span class="info-value">${p.foreignFriendly.easeOfUse}</span>
+                        </div>
+                        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                            <div class="info-label" style="margin-bottom: 8px;">Quick Guide:</div>
+                            <p>${p.foreignFriendly.simpleInstructions}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>💡 Why we recommend</h3>
+                        <p style="color: var(--text-main); font-weight: 500;">${p.whyThisPlace}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="fixed-bottom">
+                <button class="btn btn-primary" onclick="alert('Opening map app for directions to ${p.name}...')">Get Directions</button>
+            </div>
+        </div>
+    `;
+}
+
+// Initial render
+render();
